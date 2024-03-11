@@ -1,5 +1,4 @@
 from functools import reduce
-from random import randint
 
 multi = (-1, 0, 1, 157, 2, 59, 158, 151, 3, 53, 60, 132, 159, 70, 152, 216, 4, 118, 54, 38, 61, 47, 133, 227, 160, 181,
          71, 210, 153, 34, 217, 16, 5, 173, 119, 221, 55, 43, 39, 191, 62, 88, 48, 83, 134, 112, 228, 247, 161, 28, 182,
@@ -73,11 +72,6 @@ const = ('110 162 118 114 108 72 122 184 93 39 189 16 221 132 148 1',
          '16 3 219 167 46 52 95 246 100 59 149 51 63 39 20 31',
          '94 167 216 88 30 20 155 97 241 106 193 69 156 237 168 32')
 
-D = ['80 81 82 83 84 85 86 87 88 89 8A 8B 8C 8D 8E 8F',
-        '90 91 92 93 94 95 96 97 98 99 9A 9B 9C 9D 9E 9F']
-
-def Key_Generate(lenght=32):
-    return [randint(0, 255) for _ in range(lenght)]
 def Add(a, b):
     return a ^ b
 
@@ -110,8 +104,7 @@ def opp_S(a):
     return [opp_nonlinear_vector[x] for x in a]
 
 def Keys_for_encryption(main_key):
-    key1 = main_key[:16]
-    key2 = main_key[16:]
+    key1, key2 = main_key[:16], main_key[16:]
     keys = []
     for i in range(32):
         if i % 8 == 0:
@@ -143,65 +136,109 @@ def DeCoding(block, keys):
         block = [Add(curr_key[j], block[j]) for j in range(16)]
     return block
 
+def CBC_Decoding(data, init_vector, key):
+    i, l, blocks = 16, len(data), []
+    while i < l:
+        blocks.append(data[i-16:i]))
+        i += 16
+    blocks.append(list(data[i-16:])
+    blocks_decoded, i, keys = [], len(blocks), Keys_for_encryption(key)
+    while i > 1:
+        curr_block = DeCoding(blocks[i - 1], keys)
+        curr_block = [Add(curr_block[j], blocks[i - 2][j]) for j in range(16)]
+        blocks_decoded.append(curr_block)
+        i -= 1
+    first_block = DeCoding(blocks[0], keys)
+    blocks_decoded.append([Add(first_block[j], init_vector[j]) for j in range(16)])
+    return blocks_decoded
+
+def CBC_Coding(data, init_vector, key):
+    i, l, blocks = 16, len(data), []
+    while i < l:
+        blocks.append(list(data[i - 16:i]))
+        i += 16
+    last_block = list(data[i - 16:])
+    add_value = 16 - len(last_block)
+    while len(last_block) != 16:
+        last_block.append(add_value)
+    blocks.append(last_block)
+    keys, i, l, blocks_coded = Keys_for_encryption(key), 1, len(blocks), []
+    previous_block = Coding([Add(init_vector[i], blocks[0][i]) for i in range(16)], keys)
+    while i < l:
+        curr_block = Coding([Add(previous_block[j], blocks[i][j]) for j in range(16)], keys)
+        blocks_coded.append(previous_block)
+        previous_block, i = curr_block, i + 1
+    blocks_coded.append(previous_block)
+    return blocks_coded
+
+def CTR(ctr):
+    ctr[-1] += 1
+    for i in range(14, 0, -1):
+        ctr[i] = ctr[i] + (ctr[i+1] // 256)
+    ctr = [x % 256 for x in ctr]
+    return ctr
+
+def ACPKM_Coding(data, ctr, key):  # s = 128 N = 256 n = 128
+    i, sections, l = 32, [], len(data)
+    while i < l:
+        sections.append(data[i - 32:i])
+        i += 32
+    sections.append(data[i - 32:])
+    ctr = list(ctr)
+    ctr.extend([0, 0, 0, 0, 0, 0, 0, 0])
+    curr_section_key, curr_section_keys, completed_sections = key, Keys_for_encryption(key), []
+    for section in sections:
+        blocks, completed_section = [section[:16]], []
+        if len(section) > 16:
+            blocks.append(section[16:])
+        for block in blocks:
+            gamma = Coding(ctr, curr_section_keys)
+            completed_block = [Add(gamma[i], block[i]) for i in range(len(block))]
+            completed_section.append(completed_block)
+            ctr = CTR(ctr)
+        completed_sections.extend(completed_section)
+        curr_section_key = ACPKM(curr_section_key)
+        curr_section_keys = Keys_for_encryption(curr_section_key)
+    return completed_sections
+
 def ACPKM(key):
     keys = Keys_for_encryption(key)
     d1 = [128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143]
     d2 = [144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159]
     return Coding(d1, keys) + Coding(d2, keys)
 
-def CTR_j(ctr_curr):
-    ctr_curr[-1] += 1
-    return ctr_curr
-
-with open('file.txt', 'rb') as file:
-    key = [136, 153, 170, 187, 204, 221, 238, 255, 0, 17, 34, 51, 68, 85, 102, 119, 254, 220, 186, 152, 118, 84, 50, 16, 1, 35, 69, 103, 137, 171, 205, 239]
-    data = [17, 34, 51, 68, 85, 102, 119, 0, 255, 238, 221, 204, 187, 170, 153, 136, 0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 238, 255, 10, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 238, 255, 10, 0, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 238, 255, 10, 0, 17, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 238, 255, 10, 0, 17, 34, 68, 85, 102, 119, 136, 153, 170, 187, 204, 238, 255, 10, 0, 17, 34, 51, 85, 102, 119, 136, 153, 170, 187, 204, 238, 255, 10, 0, 17, 34, 51, 68]
-    mode = 'ACPKM'
-    if mode == 'CBC':
-        i, blocks, l = 16, [], len(data)
-        while i < l:
-            blocks.append(data[i-16:i])
-            i += 16
-        last_block = list(data[i-16:])
-        add_value = 16 - len(last_block)
-        while len(last_block) != 16:
-            last_block.append(add_value)
-        blocks.append(last_block)
-        keys, i, l, result = Keys_for_encryption(Key_Generate()), 1, len(blocks), []
-        init_vector = Key_Generate(16)
-        last_block = Coding([Add(init_vector[i], blocks[0][i]) for i in range(16)], keys)
-        while i < l:
-            curr_block = Coding([Add(last_block[j], blocks[i][j]) for j in range(16)], keys)
-            result.append(last_block)
-            last_block, i = curr_block, i+1
-        result.append(last_block)
-        blocks1 = []
-        while i > 1:
-            curr_block = DeCoding(result[i-1], keys)
-            curr_block = [Add(curr_block[j], result[i-2][j]) for j in range(16)]
-            blocks1.append(curr_block)
-            i -= 1
-        first_block = DeCoding(result[0], keys)
-        blocks1.append([Add(first_block[j], init_vector[j]) for j in range(16)])
-        blocks1 = blocks1[::-1]
-    if mode == 'ACPKM': # s = 128 N = 256 n = 128
-        i, sections, l, keys = 32, [], len(data), Keys_for_encryption(key)
-        while i < l:
-            sections.append(data[i - 32:i])
-            i += 32
-        last_block = list(data[i - 32:])
-        sections.append(last_block)
-        ctr = [18, 52, 86, 120, 144, 171, 206, 240] ## сделать генерацию
-        ctr.extend([0, 0, 0, 0, 0, 0, 0, 0])
-        curr_key = key
-        for section in sections:
-            blocks = [section[:16], section[16:]]
-            for block in blocks:
-                gamma = Coding(CTR_j(ctr), keys)
-                ctr = CTR_j(ctr)
+with open('file1.txt', 'rb') as file, open('file2.txt', 'wb+') as final:
+    mode = file.read(4)
+    final.write(mode)
+    value = sum(mode[1:])
+    if value = 212:
+        ctr = file.read(8)
+        final.write(ctr)
+        key = file.read(32)
+        data = file.read()
+        result = ACPKM_Coding(data, ctr, key)
+    else:
+        init_vector = file.read(16)
+        final.write(init_vector)
+        key = file.read(32)
+        data = file.read()
+        if mode[0] == 0:
+            result = CBC_Coding(data, init_vector, key)
+        else:
+            result = CBC_Decoding(data, init_vector, key)
+    final.write(key)
+    for x in result:
+        final.write(bytes(x))
 
 
-            curr_key = ACPKM(key)
+
+
+
+
+
+
+
+
 
 
 
