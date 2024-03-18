@@ -1,2 +1,3 @@
-a = [17, 99, 254, 255]
-print(bytes(a))
+a = [1, 2, 3, 4, 5, 6]
+a = bytes(a)
+print(a, type(a))

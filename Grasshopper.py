@@ -139,9 +139,9 @@ def DeCoding(block, keys):
 def CBC_Decoding(data, init_vector, key):
     i, l, blocks = 16, len(data), []
     while i < l:
-        blocks.append(data[i-16:i]))
+        blocks.append(data[i-16:i])
         i += 16
-    blocks.append(list(data[i-16:])
+    blocks.append(list(data[i-16:]))
     blocks_decoded, i, keys = [], len(blocks), Keys_for_encryption(key)
     while i > 1:
         curr_block = DeCoding(blocks[i - 1], keys)
@@ -211,22 +211,22 @@ with open('file1.txt', 'rb') as file, open('file2.txt', 'wb+') as final:
     mode = file.read(4)
     final.write(mode)
     value = sum(mode[1:])
-    if value = 212:
+    if value == 212:
         ctr = file.read(8)
         final.write(ctr)
-        key = file.read(32)
+        key = list(file.read(32))
         data = file.read()
         result = ACPKM_Coding(data, ctr, key)
     else:
         init_vector = file.read(16)
         final.write(init_vector)
-        key = file.read(32)
+        key = list(file.read(32))
         data = file.read()
         if mode[0] == 0:
             result = CBC_Coding(data, init_vector, key)
         else:
             result = CBC_Decoding(data, init_vector, key)
-    final.write(key)
+    final.write(bytes(key))
     for x in result:
         final.write(bytes(x))
 
