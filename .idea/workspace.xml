@@ -5,9 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d91c951e-f362-40cc-bd8d-028e29d176fe" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/Grasshopper.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Grasshopper.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Testing_some_function.py" beforeDir="false" afterPath="$PROJECT_DIR$/Testing_some_function.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/file1.txt" beforeDir="false" afterPath="$PROJECT_DIR$/file1.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/file2.txt" beforeDir="false" afterPath="$PROJECT_DIR$/file2.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -46,7 +47,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python.Testing_some_function">
+  <component name="RunManager" selected="Python.main">
     <configuration name="Test2" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Grasshopper" />
       <option name="ENV_FILES" value="" />
