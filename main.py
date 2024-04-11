@@ -36,6 +36,7 @@ consts_4 = [[240, 210, 233, 227], [80, 144, 213, 119], [172, 17, 215, 250], [45,
 
 consts = [consts_0, consts_1, consts_2, consts_3, consts_4] """
 
+# Также чередуются
 consts_0 = [809079974, 3761469464, 3236319897, 1142663437, 1824733714, 2134168642, 3696662590, 2475237759, 503320719, 3853040870, 2013282877, 1383381748, 2405136514, 646486951, 2531384082, 2585947805]
 
 consts_1 = [3068006637, 23617341, 1895070382, 94469364, 117941204, 3171535562, 471764817, 4096207656, 1887059269, 340452812, 2930935138, 4205293099, 3133805961, 776532417, 1084518206, 3106129668]
@@ -104,7 +105,7 @@ def MegaTrans(words):
     return [Trans(x) for x in words]
 
 def Shift(n, d): # реализует сдвиг на d
-    return ( (n << d) % 2**32 ) | (n >> (32 - d))
+    return ( (n << d) % 4294967296 ) | (n >> (32 - d))
 
 def bin32(a): # переводит число к 32 символьной двоичной строке
     result = bin(a)[2:]
@@ -117,14 +118,14 @@ def opp_Trans(a): # переводит 32-символьную строку в �
         result.append(int(curr, 2))
     return result
 
-def SubCrumb(a):
+def SubCrumb(a): # a - список из 4-ёх 4-байтовых списков
     a = MegaTrans(a)
     new_a = ['' for _ in range(4)]
     for l in range(32):
         number_of_block = int(a[3][l] + a[2][l] + a[1][l] + a[0][l], 2)
         curr_block = blocks_for_subcrumb[number_of_block]
         for j in range(3, -1, -1):
-            new_a[j] = new_a[j] + curr_block[j]
+            new_a[j] += curr_block[3-j]
     return [opp_Trans(x) for x in new_a]
 
 def Mix_Word(x, x4):
@@ -151,6 +152,7 @@ def Permutation(b): ## на входе блоки 1..w
         words = []
         for i in range(8):
             words.append(curr_block[4*i:4*i+4])
+        words = Tweak(words)
         for round in range(8):
             words[:4] = SubCrumb(words[:4])
             words[4:] = SubCrumb(words[4:])
@@ -163,11 +165,16 @@ def Permutation(b): ## на входе блоки 1..w
         ready_blocks.append(ready_block)
     return ready_blocks
 
+def Tweak(words):
+    for j in range(4, 8):
+        curr_word = Trans(words[j])
+        words[j] = opp_Trans(curr_word[-j:] + curr_word[:-j])
+    return words
+
 with open('file1.txt', 'rb') as file:
     w = ord(file.read(1)) - 48
     if not(w in [3, 4, 5]):
         print('Введите корректное значение w')
-        exit()
     blocks, curr_block = list(), list()
     while True:
         curr_block = list(file.read(32))                           # считываем блок
@@ -194,6 +201,13 @@ with open('file1.txt', 'rb') as file:
     for i in range(w):
         result = [Add(result[j], result_block[i][j]) for j in range(32)]
     print(*[hex(x)[2:] for x in result])
+
+a, start = [], 1
+for i in range(255):
+    start = Multi(start, 2)
+    a.append(start)
+print(a)
+
 
 
 
