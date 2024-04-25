@@ -1,4 +1,5 @@
 from functools import reduce
+import time
 
 multi = (-1, 0, 1, 157, 2, 59, 158, 151, 3, 53, 60, 132, 159, 70, 152, 216, 4, 118, 54, 38, 61, 47, 133, 227, 160, 181,
          71, 210, 153, 34, 217, 16, 5, 173, 119, 221, 55, 43, 39, 191, 62, 88, 48, 83, 134, 112, 228, 247, 161, 28, 182,
@@ -136,6 +137,36 @@ def DeCoding(block, keys):
         block = [Add(curr_key[j], block[j]) for j in range(16)]
     return block
 
+def Standart_Coding(data, key):
+    i, l, blocks = 16, len(data), []
+    while i < l:
+        blocks.append(list(data[i - 16:i]))
+        i += 16
+    last_block = list(data[i - 16:])
+    l = len(last_block)
+    while l != 16:
+        last_block.append(0)
+        l += 1
+    blocks.append(last_block)
+    keys, ready_blocks = Keys_for_encryption(key), []
+    for block in blocks:
+        ready_block = Coding(block, keys)
+        ready_blocks.append(ready_block)
+    return ready_blocks
+
+def Standart_Decoding(data, key):
+    i, l, blocks = 16, len(data), []
+    while i < l:
+        blocks.append(list(data[i - 16:i]))
+        i += 16
+    last_block = list(data[i - 16:])
+    blocks.append(last_block)
+    keys, ready_blocks = Keys_for_encryption(key), []
+    for block in blocks:
+        ready_block = DeCoding(block, keys)
+        ready_blocks.append(ready_block)
+    return ready_blocks
+
 def CBC_Decoding(data, init_vector, key):
     i, l, blocks = 16, len(data), []
     while i < l:
@@ -207,28 +238,63 @@ def ACPKM(key):
     d2 = [144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159]
     return Coding(d1, keys) + Coding(d2, keys)
 
-with open('file1.txt', 'rb') as file, open('file2.txt', 'wb+') as final:
+with open('1MB.txt', 'rb') as file, open('file2.txt', 'wb+') as final:
+    start = time.time()
     mode = file.read(4)
     final.write(mode)
-    value = sum(mode[1:])
+    value = sum(mode[1:]) ## возможные значения данной суммы 200, 212, 243
     if value == 212:
         ctr = file.read(8)
         final.write(ctr)
         key = list(file.read(32))
         data = file.read()
         result = ACPKM_Coding(data, ctr, key)
-    else:
+    elif value == 200:
         init_vector = file.read(16)
         final.write(init_vector)
         key = list(file.read(32))
         data = file.read()
-        if mode[0] == 0:
+        if mode[0] == 48:
             result = CBC_Coding(data, init_vector, key)
         else:
             result = CBC_Decoding(data, init_vector, key)
+    elif value == 243:
+        key = list(file.read(32))
+        data = list(file.read())
+        if mode[0] == 48:
+            result = Standart_Coding(data, key)
+        else:
+            result = Standart_Decoding(data, key)
+    else:
+        print('Некорректное значение режима, доступные: CBC, ACP, WTH')
+        exit()
     final.write(bytes(key))
     for x in result:
         final.write(bytes(x))
+    end = time.time()
+    print(f'Время выполнения программы {end - start}')
+
+''' samples = ['64a59400000000000000000000000000', 'd456584dd0e3e84cc3166e4b7fa2890d', '79d26221b87b584cd42fbc4ffea5de9a', '0e93691a0cfc60408b7b68f66b513c13']
+for sample in samples:
+    sample = [int(sample[2*i:2*i+2], 16) for i in range(16)] ## функции работают со списками, поэтому
+    sample = L(sample)                                       ## нужно сделать преобразование
+    print(''.join([hex(x)[2:] for x in sample]))    '''
+
+''' key = '8899aabbccddeeff0011223344556677fedcba98765432100123456789abcdef'
+key = [int(key[2 * i:2 * i + 2], 16) for i in range(32)]  ## функции работают со списками, поэтому
+keys = Keys_for_encryption(key)                           ## нужно сделать преобразование
+for num, key in enumerate(keys):
+    print(num+1, ''.join([hex(x)[2:] for x in key]))    '''
+
+'''text = '7f679d90bebc24305a468d42b9d4edcd'
+text = [int(text[2 * i:2 * i + 2], 16) for i in range(16)]
+key = '8899aabbccddeeff0011223344556677fedcba98765432100123456789abcdef'
+key = [int(key[2 * i:2 * i + 2], 16) for i in range(32)]
+result = DeCoding(text, Keys_for_encryption(key))
+print(''.join([hex(x)[2:] for x in result]))    '''
+
+
+
 
 
 
