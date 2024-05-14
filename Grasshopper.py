@@ -1,5 +1,9 @@
+import os.path
 from functools import reduce
 import time
+import sys
+import argparse
+import сommon_functions
 
 multi = (-1, 0, 1, 157, 2, 59, 158, 151, 3, 53, 60, 132, 159, 70, 152, 216, 4, 118, 54, 38, 61, 47, 133, 227, 160, 181,
          71, 210, 153, 34, 217, 16, 5, 173, 119, 221, 55, 43, 39, 191, 62, 88, 48, 83, 134, 112, 228, 247, 161, 28, 182,
@@ -238,60 +242,102 @@ def ACPKM(key):
     d2 = [144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159]
     return Coding(d1, keys) + Coding(d2, keys)
 
-with open('1MB.txt', 'rb') as file, open('file2.txt', 'wb+') as final:
+def usage():
+    print(f"[***] Usage: {sys.argv[0]} -r <regime (0 or 1)>, -m <mode (CTR, CBC, ECB)>, -i1 <filename>, -i2 <filename>, -i3 <filename>")
+    exit()
+
+def get_key_from_file(path):
+    with open(path, 'rb') as file:
+        key = file.read()
+        if len(key) != 32:
+            print('The key of the Grasshopper is 32 bytes. File you wrote includes more ones. Please, try again\n')
+            usage()
+    return key
+
+def get_init_vector_from_file(path, mode):
+    with open(path, 'rb') as file:
+        init_vector = file.read()
+        if mode == 'CBC':
+            if len(init_vector) != 16:
+                print('For mode CBC init-vector must be 16 bytes. Please, try again\n')
+                usage()
+        elif mode == 'CTR':
+            if len(init_vector) != 8:
+                print('For mode CTR-ACPKM ctr-vector must be 8 bytes. Please, try again\n')
+                usage()
+    return init_vector
+
+def put_result_in_file(data):
+    with open('result.txt', 'wb') as file:
+        for block in data:
+            file.write(bytes(block))
+    return 0
+
+def main():
     start = time.time()
-    mode = file.read(4)
-    final.write(mode)
-    value = sum(mode[1:]) ## возможные значения данной суммы 200, 212, 243
-    if value == 212:
-        ctr = file.read(8)
-        final.write(ctr)
-        key = list(file.read(32))
-        data = file.read()
-        result = ACPKM_Coding(data, ctr, key)
-    elif value == 200:
-        init_vector = file.read(16)
-        final.write(init_vector)
-        key = list(file.read(32))
-        data = file.read()
-        if mode[0] == 48:
-            result = CBC_Coding(data, init_vector, key)
+    parser = argparse.ArgumentParser(description='Parser for getting nessecary info from command line')
+    parser.add_argument('-r', '--regime', type=int, help='Regime (0 for coding; 1 for decoding)')
+    parser.add_argument('-m', '--mode', type=str, help='Mode of Grasshopper (CTR, CBC, ECB)')
+    parser.add_argument('-i1', '--input_data', type=str, help='File, which include the only data')
+    parser.add_argument('-i2', '--input_key', type=str, help='File, which includes the only key')
+    parser.add_argument('-i3', '--input_init_vector', type=str, help='File, which includes the only init_vector')
+
+    args = parser.parse_args()
+    regime = args.regime
+    mode = args.mode
+
+    input_data, data = args.input_data, bytes()
+    if not(input_data is None):
+        all_files = [os.path.abspath(input_data)]
+        if os.path.isdir(all_files[0]):
+            сommon_functions.bypass(all_files[0])
+        for curr_file in all_files:
+            data += сommon_functions.get_bytes_from_file(curr_file)
+
+    input_key = args.input_key
+    if input_key is None:
+        usage()
+    key = list(get_key_from_file(input_key))
+
+    input_init_vector = args.input_init_vector
+
+    if not(regime in (0, 1) and mode in ('CBC', 'CTR', 'ECB')):
+        usage()
+    if input_init_vector is None:
+        if mode != 'ECB':
+            print('Chosen mode requires init_vector')
+            usage()
+        if regime == 0:
+            put_result_in_file(Standart_Coding(data, key))
+            end = time.time()
+            print(f'Время выполнения программы: {end - start}')
+            exit()
         else:
-            result = CBC_Decoding(data, init_vector, key)
-    elif value == 243:
-        key = list(file.read(32))
-        data = list(file.read())
-        if mode[0] == 48:
-            result = Standart_Coding(data, key)
-        else:
-            result = Standart_Decoding(data, key)
+            put_result_in_file(Standart_Decoding(data, key))
+            end = time.time()
+            print(f'Время выполнения программы: {end - start}')
+            exit()
     else:
-        print('Некорректное значение режима, доступные: CBC, ACP, WTH')
-        exit()
-    final.write(bytes(key))
-    for x in result:
-        final.write(bytes(x))
+        input_init_vector = get_init_vector_from_file(input_init_vector, mode)
+
+    if mode == 'CBC' and len(input_init_vector) == 16:
+        if regime == 0:
+            put_result_in_file(CBC_Coding(data, input_init_vector, key))
+        else:
+            put_result_in_file(CBC_Decoding(data, input_init_vector, key))
+    elif mode == 'CTR':
+        put_result_in_file(ACPKM_Coding(data, input_init_vector, key))
+    else:
+        if regime == 0:
+            put_result_in_file(Standart_Coding(data, key))
+        else:
+            put_result_in_file(Standart_Decoding(data, key))
     end = time.time()
-    print(f'Время выполнения программы {end - start}')
+    print(f'Время выполнения программы: {end - start}')
 
-''' samples = ['64a59400000000000000000000000000', 'd456584dd0e3e84cc3166e4b7fa2890d', '79d26221b87b584cd42fbc4ffea5de9a', '0e93691a0cfc60408b7b68f66b513c13']
-for sample in samples:
-    sample = [int(sample[2*i:2*i+2], 16) for i in range(16)] ## функции работают со списками, поэтому
-    sample = L(sample)                                       ## нужно сделать преобразование
-    print(''.join([hex(x)[2:] for x in sample]))    '''
+if __name__ == '__main__':
+    main()
 
-''' key = '8899aabbccddeeff0011223344556677fedcba98765432100123456789abcdef'
-key = [int(key[2 * i:2 * i + 2], 16) for i in range(32)]  ## функции работают со списками, поэтому
-keys = Keys_for_encryption(key)                           ## нужно сделать преобразование
-for num, key in enumerate(keys):
-    print(num+1, ''.join([hex(x)[2:] for x in key]))    '''
-
-'''text = '7f679d90bebc24305a468d42b9d4edcd'
-text = [int(text[2 * i:2 * i + 2], 16) for i in range(16)]
-key = '8899aabbccddeeff0011223344556677fedcba98765432100123456789abcdef'
-key = [int(key[2 * i:2 * i + 2], 16) for i in range(32)]
-result = DeCoding(text, Keys_for_encryption(key))
-print(''.join([hex(x)[2:] for x in result]))    '''
 
 
 
